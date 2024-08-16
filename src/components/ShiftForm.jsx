@@ -31,6 +31,30 @@ const ShiftForm = ({ onCreateShift }) => {
 
   const handleFinish = (values) => {
     try {
+      const now = moment();
+      const [shiftStart, shiftEnd] = values.time;
+
+      if (now > shiftStart) {
+        message.error("Shift start time should be in the future");
+        return;
+      }
+
+      for (let i = 0; i < pauses.length; i++) {
+        const { from, to } = pauses[i];
+        if (!from || !to) {
+          message.error("Pause times cannot be empty");
+          return;
+        }
+
+        const pauseStart = moment(from, "YYYY-MM-DD HH:mm:ss");
+        const pauseEnd = moment(to, "YYYY-MM-DD HH:mm:ss");
+
+        if (pauseStart <= shiftStart || pauseEnd >= shiftEnd) {
+          message.error(`Pause ${i + 1} must be within the shift time range`);
+          return;
+        }
+      }
+
       const shift = {
         ...values,
         pauses,
@@ -110,27 +134,33 @@ const ShiftForm = ({ onCreateShift }) => {
               value={pause.name}
               onChange={(e) => handlePauseChange(index, "name", e.target.value)}
             />
-            <TimePicker
-              value={pause.from ? moment(pause.from, "HH:mm:ss") : null}
-              onChange={(time) =>
+            <DatePicker
+              showTime
+              placeholder="Start Time"
+              value={
+                pause.from ? moment(pause.from, "YYYY-MM-DD HH:mm:ss") : null
+              }
+              onChange={(dateTime) =>
                 handlePauseChange(
                   index,
                   "from",
-                  time ? time.format("HH:mm:ss") : null
+                  dateTime ? dateTime.format("YYYY-MM-DD HH:mm:ss") : null
                 )
               }
-              format="HH:mm:ss"
+              format="YYYY-MM-DD HH:mm:ss"
             />
-            <TimePicker
-              value={pause.to ? moment(pause.to, "HH:mm:ss") : null}
-              onChange={(time) =>
+            <DatePicker
+              showTime
+              placeholder="End Time"
+              value={pause.to ? moment(pause.to, "YYYY-MM-DD HH:mm:ss") : null}
+              onChange={(dateTime) =>
                 handlePauseChange(
                   index,
                   "to",
-                  time ? time.format("HH:mm:ss") : null
+                  dateTime ? dateTime.format("YYYY-MM-DD HH:mm:ss") : null
                 )
               }
-              format="HH:mm:ss"
+              format="YYYY-MM-DD HH:mm:ss"
             />
           </Space>
         ))}

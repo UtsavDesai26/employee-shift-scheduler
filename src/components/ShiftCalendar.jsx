@@ -16,16 +16,23 @@ const ShiftCalendar = ({ shifts }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [listData, setListData] = useState([]);
 
-  const updateShiftStatus = () => {
-    const now = moment();
-    shifts.forEach((shift) => {
-      const start = moment(shift.time[0]);
-      const end = moment(shift.time[1]);
+  const compareDates = (date1, date2) => {
+    return date1.getTime() - date2.getTime();
+  };
 
-      if (now.isBetween(start, end, null, "[)")) {
+  const updateShiftStatus = () => {
+    const now = new Date();
+
+    shifts.forEach((shift) => {
+      const start = new Date(shift.time[0]);
+      const end = new Date(shift.time[1]);
+
+      if (compareDates(now, start) >= 0 && compareDates(now, end) < 0) {
         shift.status = "active";
-      } else if (now.isAfter(end)) {
+      } else if (compareDates(now, end) >= 0) {
         shift.status = "completed";
+      } else if (compareDates(now, start) < 0) {
+        shift.status = "upcoming";
       }
     });
   };
@@ -80,26 +87,72 @@ const ShiftCalendar = ({ shifts }) => {
         <List
           dataSource={listData}
           renderItem={(item) => (
-            <List.Item>
-              <Badge
-                color={item.color}
-                text={`${item.name}: ${moment(item.time[0]).format(
-                  "HH:mm"
-                )} - ${moment(item.time[1]).format("HH:mm")}`}
-              />
-              {item.status === "active" && (
-                <span style={{ color: "green" }}> (Active)</span>
-              )}
-              {item.status === "completed" && (
-                <span style={{ color: "red" }}> (Completed)</span>
-              )}
-              <ul>
-                {item.pauses.map((pause, index) => (
-                  <li key={index}>
-                    Pause: {moment(pause.start).format("HH:mm")} -{" "}
-                    {moment(pause.end).format("HH:mm")}
-                  </li>
-                ))}
+            <List.Item
+              key={item.id}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  width: "100%",
+                }}
+              >
+                <div>
+                  <Badge
+                    color={item.color}
+                    text={`${item.name}: ${moment(item.time[0]).format(
+                      "YYYY-MM-DD HH:mm:ss"
+                    )} - ${moment(item.time[1]).format("YYYY-MM-DD HH:mm:ss")}`}
+                  />
+                </div>
+                <div>
+                  {item.status &&
+                    (item.status === "active" ? (
+                      <Badge status="processing" text="Active" />
+                    ) : item.status === "completed" ? (
+                      <Badge status="success" text="Completed" />
+                    ) : (
+                      item.status === "upcoming" && (
+                        <Badge status="default" text="Upcoming" />
+                      )
+                    ))}
+                </div>
+              </div>
+              <p
+                style={{
+                  margin: 0,
+                  marginTop: 10,
+                  marginBottom: 5,
+                  fontWeight: "bold",
+                }}
+              >
+                Pauses:
+              </p>
+              <ul
+                style={{
+                  padding: 0,
+                  margin: 0,
+                  listStyleType: "none",
+                }}
+              >
+                {item.pauses
+                  .filter((pause) => {
+                    return (
+                      pause.from >= item.time[0] && pause.to <= item.time[1]
+                    );
+                  })
+                  .map((pause, index) => (
+                    <li key={index}>
+                      {pause.name}:{" "}
+                      {moment(pause.from).format("YYYY-MM-DD HH:mm:ss")} -{" "}
+                      {moment(pause.to).format("YYYY-MM-DD HH:mm:ss")}
+                    </li>
+                  ))}
               </ul>
             </List.Item>
           )}
